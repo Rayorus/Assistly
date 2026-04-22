@@ -1,0 +1,7 @@
+PyQt5==5.15.11
+openai>=1.30.0
+python-dotenv==1.1.0
+keyboard==0.13.5
+pyttsx3==2.98
+SpeechRecognition==3.14.1
+PyAudio==0.2.14
