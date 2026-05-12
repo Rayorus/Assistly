@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   OverlayOS — Desktop AI Assistant Setup
+echo   Assistly — Desktop AI Assistant Setup
 echo ============================================
 echo.
 
@@ -21,7 +21,7 @@ pip install -r requirements.txt
 echo [3/3] Setup complete!
 echo.
 echo ============================================
-echo   IMPORTANT: Edit .env and add your OpenAI API key
+echo   IMPORTANT: Edit .env and add your Gemini API key
 echo   Then run:  python main.py
 echo   Hotkey:    Ctrl+Space to toggle overlay
 echo ============================================

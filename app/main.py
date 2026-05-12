@@ -1,13 +1,24 @@
 """
-OverlayOS - Entry point.
+Assistly - Entry point.
 Ctrl+Space toggles overlay. System tray icon.
 """
 import sys
 import os
+import ctypes
 
-# Force unbuffered output so we see prints immediately
-sys.stdout.reconfigure(line_buffering=True)
+# Force unbuffered UTF-8 output so we see prints immediately (including emoji)
+sys.stdout.reconfigure(encoding='utf-8', errors='replace', line_buffering=True)
+sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+# DPI awareness: make Qt use physical pixels (same as pywinauto)
+# This MUST be set before QApplication is created
+try:
+    ctypes.windll.user32.SetProcessDPIAware()
+except:
+    pass
+os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "0"
+os.environ["QT_SCALE_FACTOR"] = "1"
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -38,7 +49,7 @@ def create_tray_icon():
 def main():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    app.setApplicationName("OverlayOS")
+    app.setApplicationName("Assistly")
 
     overlay = OverlayController()
 
@@ -48,12 +59,12 @@ def main():
     show_act = QAction("Toggle Overlay (Ctrl+Space)")
     show_act.triggered.connect(overlay.toggle)
     menu.addAction(show_act)
-    quit_act = QAction("Quit OverlayOS")
+    quit_act = QAction("Quit Assistly")
     quit_act.triggered.connect(app.quit)
     menu.addAction(quit_act)
     tray.setContextMenu(menu)
     tray.activated.connect(lambda r: overlay.toggle() if r == QSystemTrayIcon.Trigger else None)
-    tray.setToolTip("OverlayOS - Ctrl+Space to toggle")
+    tray.setToolTip("Assistly - Ctrl+Space to toggle")
     tray.show()
 
     # Global hotkey
@@ -61,7 +72,7 @@ def main():
 
     overlay.show()
     print("=" * 40)
-    print("  OverlayOS running!")
+    print("  Assistly running!")
     print("  Ctrl+Space -> Toggle overlay")
     print("=" * 40)
     sys.stdout.flush()

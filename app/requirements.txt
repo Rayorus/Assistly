@@ -5,3 +5,7 @@ keyboard==0.13.5
 pyttsx3==2.98
 SpeechRecognition==3.14.1
 PyAudio==0.2.14
+pywinauto>=0.6.8
+Pillow>=10.0.0
+pyautogui>=0.9.54
+comtypes>=1.4.0

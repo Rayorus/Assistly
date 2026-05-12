@@ -1,10 +1,13 @@
 """
-OverlayOS — Voice Engine
+Assistly — Voice Engine
 Speech-to-text and text-to-speech on background threads.
 """
 import threading
-import pyttsx3
 from PyQt5.QtCore import QObject, pyqtSignal
+import asyncio
+import os
+import tempfile
+import pygame
 
 # Lazy imports for optional dependencies
 _sr = None
@@ -15,6 +18,11 @@ def _get_sr():
         _sr = sr
     return _sr
 
+try:
+    import edge_tts
+    pygame.mixer.init()
+except Exception as e:
+    print(f"[Voice] Edge-TTS init error: {e}")
 
 class VoiceEngine(QObject):
     transcript_ready = pyqtSignal(str)       # Final transcription
@@ -28,26 +36,10 @@ class VoiceEngine(QObject):
         super().__init__()
         self._listening = False
         self._speak_lock = threading.Lock()
-        self._tts_engine = None
-        self._init_tts()
-
-    def _init_tts(self):
-        try:
-            self._tts_engine = pyttsx3.init()
-            self._tts_engine.setProperty('rate', 175)
-            self._tts_engine.setProperty('volume', 0.85)
-            voices = self._tts_engine.getProperty('voices')
-            # Prefer a female voice if available
-            for v in voices:
-                if 'zira' in v.name.lower() or 'female' in v.name.lower():
-                    self._tts_engine.setProperty('voice', v.id)
-                    break
-        except Exception as e:
-            print(f"[Voice] TTS init error: {e}")
+        self._stop_playback = False
 
     def set_rate(self, rate: int):
-        if self._tts_engine:
-            self._tts_engine.setProperty('rate', rate)
+        pass # edge-tts uses built in rates
 
     @property
     def is_listening(self):
@@ -94,22 +86,50 @@ class VoiceEngine(QObject):
             self.listening_stopped.emit()
 
     def speak(self, text: str):
+        self._stop_playback = False
         threading.Thread(target=self._speak_thread, args=(text,), daemon=True).start()
 
     def _speak_thread(self, text: str):
         with self._speak_lock:
             try:
-                if self._tts_engine:
-                    self._tts_engine.say(text)
-                    self._tts_engine.runAndWait()
+                # Remove Markdown for cleaner speech
+                import re
+                clean_text = re.sub(r'[*_#]', '', text)
+                clean_text = re.sub(r'```.*?```', 'code block', clean_text, flags=re.DOTALL)
+                
+                async def _generate():
+                    voice = "en-US-GuyNeural"  # Confident casual male voice
+                    communicate = edge_tts.Communicate(clean_text, voice)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+                        temp_path = fp.name
+                    await communicate.save(temp_path)
+                    return temp_path
+
+                path = asyncio.run(_generate())
+                
+                if not self._stop_playback:
+                    pygame.mixer.music.load(path)
+                    pygame.mixer.music.play()
+                    while pygame.mixer.music.get_busy() and not self._stop_playback:
+                        pygame.time.Clock().tick(10)
+                    if self._stop_playback:
+                        pygame.mixer.music.stop()
+                    pygame.mixer.music.unload()
+
+                try:
+                    os.remove(path)
+                except:
+                    pass
+
             except Exception as e:
                 print(f"[Voice] TTS error: {e}")
             finally:
                 self.speech_finished.emit()
 
     def stop_speaking(self):
+        self._stop_playback = True
         try:
-            if self._tts_engine:
-                self._tts_engine.stop()
+            if pygame.mixer.get_init():
+                pygame.mixer.music.stop()
         except:
             pass
